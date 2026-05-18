@@ -10,6 +10,7 @@ const port = process.env.PORT || 8000
 const cors = require('cors')
 app.use(cors())
 app.use(express.json())
+
 const uri = process.env.MONGODB_URI;
 const client = new MongoClient(uri, {
   serverApi: {
@@ -21,8 +22,19 @@ const client = new MongoClient(uri, {
 
   async function run() {
     try {
+      const db = client.db("Mediqueue")
+      const tutorsCollection = db.collection("tutors")
+
+      app.get('/tutors', async (req, res) => {
+        const cursor = tutorsCollection.find({})
+        const tutors = await cursor.toArray()
+        res.send(tutors)
+      })
+
+      
       // Connect the client to the server	(optional starting in v4.7)
       await client.connect();
+
       // Send a ping to confirm a successful connection
       await client.db("admin").command({ ping: 1 });
       console.log("Pinged your deployment. You successfully connected to MongoDB!");
@@ -31,8 +43,6 @@ const client = new MongoClient(uri, {
     }
   }
   run().catch(console.dir);
-
-
 
 app.get('/', (req, res) => {
   res.send('Hello World!')
