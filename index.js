@@ -24,6 +24,7 @@ const client = new MongoClient(uri, {
     try {
       const db = client.db("Mediqueue")
       const tutorsCollection = db.collection("tutors")
+      const bookingsCollection = db.collection("bookings")
 
       app.get('/tutors', async (req, res) => {
         const cursor = tutorsCollection.find({})
@@ -42,7 +43,15 @@ const client = new MongoClient(uri, {
         res.status(201).send({ insertedId: result.insertedId })
       })
 
-      
+      app.post('/bookings', async (req, res) => {
+        const booking = req.body
+        const result = await bookingsCollection.insertOne(booking)
+        res.status(201).send({ insertedId: result.insertedId })
+      })
+      app.get('/bookings', async (req, res) => {
+        const bookings = await bookingsCollection.find({}).toArray()
+        res.send(bookings)
+      })
       // Connect the client to the server	(optional starting in v4.7)
       await client.connect();
 
