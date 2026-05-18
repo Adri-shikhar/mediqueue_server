@@ -36,6 +36,12 @@ const client = new MongoClient(uri, {
         res.send(tutor)
       })
 
+      app.post('/tutors', async (req, res) => {
+        const tutor = req.body
+        const result = await tutorsCollection.insertOne(tutor)
+        res.status(201).send({ insertedId: result.insertedId })
+      })
+
       
       // Connect the client to the server	(optional starting in v4.7)
       await client.connect();
