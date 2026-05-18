@@ -3,7 +3,7 @@ const express = require('express')
 const dotenv = require('dotenv')
 dotenv.config()
 const { MongoClient, ServerApiVersion } = require('mongodb');
-
+const { ObjectId } = require('mongodb')
 
 const app = express()
 const port = process.env.PORT || 8000
@@ -29,6 +29,11 @@ const client = new MongoClient(uri, {
         const cursor = tutorsCollection.find({})
         const tutors = await cursor.toArray()
         res.send(tutors)
+      })
+      app.get('/tutors/:id', async (req, res) => {
+        const id = req.params.id
+        const tutor = await tutorsCollection.findOne({ _id: new ObjectId(id) })
+        res.send(tutor)
       })
 
       
