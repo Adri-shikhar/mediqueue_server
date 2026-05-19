@@ -50,16 +50,65 @@ const client = new MongoClient(uri, {
         )
       }
 
+      function escapeRegex(value) {
+        return String(value).replace(/[.*+?^${}()|[\]\\]/g, '\\$&')
+      }
+
       app.get('/tutors', async (req, res) => {
-        const { createdBy_id, limit } = req.query
-        const filter = createdBy_id ? { createdBy_id } : {}
-        let cursor = tutorsCollection.find(filter)
+        const {
+          createdBy_id,
+          limit,
+          name,
+          registrationStart,
+          registrationEnd,
+        } = req.query
+
+        const filter = {}
+
+        if (createdBy_id) {
+          filter.createdBy_id = createdBy_id
+        }
+
+        // Case-insensitive search by tutor name ($regex)
+        if (name && String(name).trim()) {
+          filter.tutorName = {
+            $regex: escapeRegex(String(name).trim()),
+            $options: 'i',
+          }
+        }
+
+        // Filter by registration date (createdAt) using $gte / $lte
+        if (registrationStart || registrationEnd) {
+          filter.createdAt = {}
+
+          if (registrationStart) {
+            const start = new Date(`${registrationStart}T00:00:00.000Z`)
+            if (!Number.isNaN(start.getTime())) {
+              filter.createdAt.$gte = start.toISOString()
+            }
+          }
+
+          if (registrationEnd) {
+            const end = new Date(`${registrationEnd}T23:59:59.999Z`)
+            if (!Number.isNaN(end.getTime())) {
+              filter.createdAt.$lte = end.toISOString()
+            }
+          }
+
+          if (Object.keys(filter.createdAt).length === 0) {
+            delete filter.createdAt
+          }
+        }
+
+        let cursor = tutorsCollection.find(filter).sort({ createdAt: -1 })
+
         if (limit) {
           const n = parseInt(limit, 10)
           if (!Number.isNaN(n) && n > 0) {
             cursor = cursor.limit(n)
           }
         }
+
         const tutors = await cursor.toArray()
         res.send(tutors)
       })
