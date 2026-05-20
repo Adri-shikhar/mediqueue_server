@@ -8,7 +8,19 @@ const { ObjectId } = require('mongodb')
 const app = express()
 const port = process.env.PORT || 8000
 const cors = require('cors')
-app.use(cors())
+const { verifyToken } = require('./middleware/verifyToken')
+
+app.use(
+  cors({
+    origin: [
+      'http://localhost:3000',
+      process.env.BETTER_AUTH_CLIENT_URL,
+      process.env.BETTER_AUTH_URL,
+    ].filter(Boolean),
+    credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization'],
+  })
+)
 app.use(express.json())
 
 const uri = process.env.MONGODB_URI;
@@ -118,13 +130,17 @@ const client = new MongoClient(uri, {
         res.send(tutor)
       })
 
-      app.post('/tutors', async (req, res) => {
+      app.get('/auth/me', verifyToken, (req, res) => {
+        res.send({ user: req.user })
+      })
+
+      app.post('/tutors', verifyToken, async (req, res) => {
         const tutor = req.body
         const result = await tutorsCollection.insertOne(tutor)
         res.status(201).send({ insertedId: result.insertedId })
       })
 
-      app.put('/tutors/:id', async (req, res) => {
+      app.put('/tutors/:id', verifyToken, async (req, res) => {
         const id = req.params.id
         const updates = { ...req.body }
         delete updates._id
@@ -141,7 +157,7 @@ const client = new MongoClient(uri, {
         res.send({ message: 'Tutor updated' })
       })
 
-      app.delete('/tutors/:id', async (req, res) => {
+      app.delete('/tutors/:id', verifyToken, async (req, res) => {
         const id = req.params.id
 
         const result = await tutorsCollection.deleteOne({
@@ -156,7 +172,7 @@ const client = new MongoClient(uri, {
       })
 
       // CREATE BOOKING — uses 1 slot
-      app.post('/bookings', async (req, res) => {
+      app.post('/bookings', verifyToken, async (req, res) => {
         const booking = req.body
         const tutorId = booking.tutorId
 
@@ -184,7 +200,7 @@ const client = new MongoClient(uri, {
           remainingSlots: tutorAfterBooking.totalSlot,
         })
       })
-      app.get('/bookings', async (req, res) => {
+      app.get('/bookings', verifyToken, async (req, res) => {
         const { user_id } = req.query
         const filter = user_id ? { user_id } : {}
         const bookings = await bookingsCollection.find(filter).toArray()
@@ -192,7 +208,7 @@ const client = new MongoClient(uri, {
       })
 
       // UPDATE BOOKING — if status becomes cancelled, return 1 slot
-      app.put('/bookings/:id', async (req, res) => {
+      app.put('/bookings/:id', verifyToken, async (req, res) => {
         const id = req.params.id
         const updates = { ...req.body }
         delete updates._id
@@ -225,7 +241,7 @@ const client = new MongoClient(uri, {
       })
 
       // Delete one booking
-      app.delete('/bookings/:id', async (req, res) => {
+      app.delete('/bookings/:id', verifyToken, async (req, res) => {
         const id = req.params.id
 
         const result = await bookingsCollection.deleteOne({
